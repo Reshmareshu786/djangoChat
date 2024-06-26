@@ -139,26 +139,106 @@
             margin-top: 0.25rem;
         }
     </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
     <div class="page-container">
         <h1>Hi {{ user_name }}, Welcome to {{ room_name }}</h1>
         <div class="chats-container" id="messages">
             {% for message in messages %}
-                <div class="message-container {% if message.author == user_name %}me{% else %}others{% endif %}">
+                <div class="message-container {% if message.user_id == user_id %}me{% else %}others{% endif %}">
                     <div class="author">{{ message.author }}</div>
-                    <div class="message {% if message.author == user_name %}me{% else %}others{% endif %}">
+                    <div class="message {% if message.user_id == user_id %}me{% else %}others{% endif %}">
                         {{ message.content }}
                         <span class="timestamp">{{ message.time_stamp }}</span>
                     </div>
                 </div>
             {% endfor %}
         </div>
-        <form method="post" action="{% url 'send_message' room_name=room_name %}">
+        <form id="chat-form" method="post" action="{% url 'send_message' room_name=room_name %}">
             {% csrf_token %}
-            <input type="text" name="message" placeholder="Type your message...">
+            <input type="text" id="message-input" name="message" placeholder="Type your message...">
             <button type="submit">Send</button>
         </form>
     </div>
+
+    <script>
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        const csrftoken = getCookie('csrftoken');
+
+        $(document).ready(function() {
+            const messagesContainer = document.getElementById('messages');
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+            const roomName = "{{ room_name }}";
+            const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+            const chatSocket = new WebSocket(
+                wsScheme + '://' + window.location.host + '/ws/chat/' + roomName + '/'
+            );
+
+            chatSocket.onopen = function(e) {
+                console.log('WebSocket connection opened');
+            };
+
+            chatSocket.onmessage = function(e) {
+                const data = JSON.parse(e.data);
+                const message = data.message;
+                const username = data.username;
+
+                const newMessageHTML = `
+                    <div class="message-container ${username === "{{ user_name }}" ? 'me' : 'others'}">
+                        <div class="author">${username}</div>
+                        <div class="message ${username === "{{ user_name }}" ? 'me' : 'others'}">
+                            ${message}
+                            <span class="timestamp">${new Date().toLocaleTimeString()}</span>
+                        </div>
+                    </div>
+                `;
+                $('#messages').append(newMessageHTML);
+                $('#messages').scrollTop($('#messages')[0].scrollHeight);
+            };
+
+            chatSocket.onerror = function(error) {
+                console.error('WebSocket Error: ', error);
+            };
+
+            chatSocket.onclose = function(e) {
+                console.error('Chat socket closed unexpectedly');
+            };
+
+            $('#chat-form').on('submit', function(e) {
+                e.preventDefault();
+                const messageInput = $('#message-input');
+                const messageContent = messageInput.val().trim();
+
+                if (messageContent === "") {
+                    return;
+                }
+
+                const message = {
+                    'message': messageContent,
+                    'username': "{{ user_name }}"
+                };
+
+                console.log('Sending message: ', message);
+                chatSocket.send(JSON.stringify(message));
+                messageInput.val('');
+            });
+        });
+    </script>
 </body>
 </html>

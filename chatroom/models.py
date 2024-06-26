@@ -11,6 +11,7 @@ class Message(models.Model):
     author = models.CharField(max_length=50)  # Changed from 'sender' to 'author'
     content = models.TextField()  # Changed from 'message' to 'content'
     time_stamp = models.DateTimeField(auto_now_add=True)  # Add a timestamp field
+    user_id = models.IntegerField(default=1)  # Provide a default value
 
     def __str__(self):
         return f"{str(self.room)} - {self.author}"

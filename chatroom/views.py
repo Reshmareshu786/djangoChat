@@ -31,6 +31,7 @@ def HomeView(request):
     }
     return render(request, 'home.html', context)
 
+@login_required
 def RoomView(request, room_name, username):
     if not username:
         return redirect('home')
@@ -43,8 +44,9 @@ def RoomView(request, room_name, username):
     get_messages = Message.objects.filter(room=existing_room)
     context = {
         "messages": get_messages,
-        "user": username,
-        "room_name": existing_room.room_name
+        "user_name": username,
+        "room_name": existing_room.room_name,
+        "user_id": request.user.id  # Pass the logged-in user's ID
     }
     return render(request, 'room.html', context)
 
@@ -53,6 +55,7 @@ def SendMessageView(request, room_name):
     if request.method == 'POST':
         message_content = request.POST.get('message')
         username = request.user.username  # Ensure the user is authenticated
+        user_id = request.user.id  # Get the logged-in user's ID
 
         try:
             room = Room.objects.get(room_name__iexact=room_name)
@@ -60,7 +63,7 @@ def SendMessageView(request, room_name):
             return redirect('home')
 
         if message_content:
-            Message.objects.create(room=room, author=username, content=message_content)
+            Message.objects.create(room=room, author=username, content=message_content, user_id=user_id)
         
         return redirect('room', room_name=room_name, username=username)
     else:
