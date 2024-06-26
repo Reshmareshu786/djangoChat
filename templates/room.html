@@ -103,10 +103,12 @@
 
         .message-container.me {
             align-self: flex-end;
+            text-align: right;
         }
 
         .message-container.others {
             align-self: flex-start;
+            text-align: left;
         }
 
         .message {
@@ -167,7 +169,7 @@
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
                 const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
+                for (let i = 0; cookies.length > i; i++) {
                     const cookie = cookies[i].trim();
                     if (cookie.substring(0, name.length + 1) === (name + '=')) {
                         cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
@@ -198,11 +200,14 @@
                 const data = JSON.parse(e.data);
                 const message = data.message;
                 const username = data.username;
+                const userId = data.user_id;
+
+                const isCurrentUser = userId == "{{ user_id }}";
 
                 const newMessageHTML = `
-                    <div class="message-container ${username === "{{ user_name }}" ? 'me' : 'others'}">
+                    <div class="message-container ${isCurrentUser ? 'me' : 'others'}">
                         <div class="author">${username}</div>
-                        <div class="message ${username === "{{ user_name }}" ? 'me' : 'others'}">
+                        <div class="message ${isCurrentUser ? 'me' : 'others'}">
                             ${message}
                             <span class="timestamp">${new Date().toLocaleTimeString()}</span>
                         </div>
@@ -231,7 +236,8 @@
 
                 const message = {
                     'message': messageContent,
-                    'username': "{{ user_name }}"
+                    'username': "{{ user_name }}",
+                    'user_id': "{{ user_id }}"
                 };
 
                 console.log('Sending message: ', message);
